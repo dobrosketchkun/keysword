@@ -14,9 +14,9 @@ number of key pair (up to 100 in default) in branched state you can defend yours
 rainbow tables attack. Curve25519 will be in hex, P-256 and RSA in PEM armor.
 
 Examples:
-python keysword.py -k curve25519 -b [1,4333,45453,64,99,3245] -n 77
+python keysword.py -k curve25519 -b [1, 4333, 45453, 64, 99, 3245] -n 77
 python keysword.py -k RSA -r 1024 -b [410, 111, 123] -n 12
-python keysword.py -k P-256 -b [1,4100,4773, 199, 7445] -n 68 -a 1000
+python keysword.py -k P-256 -b [1, 4100, 4773, 199, 7445] -n 68 -a 1000
 
 Arguments:
   -h, --help            show this help message and exit
