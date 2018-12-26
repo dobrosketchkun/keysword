@@ -26,7 +26,7 @@ Arguments:
   -r RSA_SIZE, --rsa-size RSA_SIZE
                         Select a size of RSA key
   -b BRANCHES, --branches BRANCHES
-                        Type a branching policy, in a [number1, ..., numberX]
+                        Type a branching policy, in a '[number1, ..., numberX]'
                         format.
   -n NUMBER, --number NUMBER
                         Select a number of a key pair you want to use in a
