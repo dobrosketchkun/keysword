@@ -23,9 +23,9 @@ rainbow tables attack. Curve25519 will be in hex, P-256 and RSA in PEM armor.
 
 Examples:
 
-python keysword.py -k curve25519 -b [1, 4333, 45453, 64, 99, 3245] -n 77
-python keysword.py -k RSA -r 1024 -b [410, 111, 123] -n 12
-python keysword.py -k P-256 -b [1, 4100, 4773, 199, 7445] -n 168 -a 1000
+python keysword.py -k curve25519 -b '[1, 4333, 45453, 64, 99, 3245]' -n 77
+python keysword.py -k RSA -r 1024 -b '[410, 111, 123]' -n 12
+python keysword.py -k P-256 -b '[1, 4100, 4773, 199, 7445]' -n 168 -a 1000
 
 '''
 
@@ -37,7 +37,7 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument('-k','--key-type', action="store", help = 'Select a type of a key (only curve25519, P-256 and RSA are allowed)')
 parser.add_argument('-r','--rsa-size', action="store",  default = 2048, help = 'Select a size of RSA key')
-parser.add_argument('-b','--branches', action="store",  help = 'Type a branching policy, in a [number1, ..., numberX] format.')
+parser.add_argument('-b','--branches', action="store",  help = 'Type a branching policy, in a \'[number1, ..., numberX]\' format.')
 parser.add_argument('-n','--number', action="store", help = 'Select a number of a key pair you want to use in a generated branched tree')
 parser.add_argument('-a','--key-amount', action="store",  default = 100, help = 'Select a key amount. The bigger the number, the longer it\'ll take to generate keys (mostly for RSA, like 15 min for ten 4096 bit RSA keys).')
 args = parser.parse_args()
@@ -47,6 +47,8 @@ rsa_size = int(args.rsa_size)
 exec('branches = ' +   args.branches)
 key_number = int(args.number)
 key_amount = int(args.key_amount)
+
+
 
 ps = 1
 while ps:	
