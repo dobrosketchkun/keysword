@@ -16,10 +16,15 @@ sys.tracebacklimit = 1
 description ='''
 USE IT ONLY IF YOU KNOW WHAT ARE YOU DOING.
 
- You can generate a key pairs of curve25519, P-256 or RSA types from you STRONG password.
-By using branching (basically it's BIP-0032 look-a-like rip-off) and choose a particular 
-number of key pair (up to 100 in default) in branched state you can defend yourself from 
-rainbow tables attack. Curve25519 will be in hex, P-256 and RSA in PEM armor.
+ ___   _  _______  __   __  _______  _     _  _______  ______    ______  
+|   | | ||       ||  | |  ||       || | _ | ||       ||    _ |  |      | 
+|   |_| ||    ___||  |_|  ||  _____|| || || ||   _   ||   | ||  |  _    |
+|      _||   |___ |       || |_____ |       ||  | |  ||   |_||_ | | |   |
+|     |_ |    ___||_     _||_____  ||       ||  |_|  ||    __  || |_|   |
+|    _  ||   |___   |   |   _____| ||   _   ||       ||   |  | ||       |
+|___| |_||_______|  |___|  |_______||__| |__||_______||___|  |_||______| 
+
+You can generate a key pairs of curve25519, P-256 or RSA types from you STRONG password.By using branching (basically it's BIP-0032 look-a-like rip-off) and choose a particular number of key pair (up to 100 in default) in branched state you can defend yourself from rainbow tables attack. Curve25519 will be in hex, P-256 and RSA in PEM armor.
 
 Examples:
 
