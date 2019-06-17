@@ -75,9 +75,9 @@ pages = args.pages
 
 
 
+table = [['Name','Brand', 'Category', 'Rank', 'Reviews','Stars','Sales','Revenue','Amazon Price','Ebay Price', 'Amazon Link', 'Ebay Link']]
 
 
-table = [['Name','Brand', 'Category', 'Rank', 'Price','Sales','Revenue','Reviews','Stars','Link','Ebay Price', 'Ebay Link']]
 
 def amazon_search(keyword, page):
 	return 'https://www.amazon.com/s?k=' + keyword.replace(' ', '+') +'&page=' + str(page)
@@ -265,7 +265,7 @@ for _all in all:
 
 
 
-	table.append([name.replace(';',' '), brand.replace(';',' '), category, rank, price, sales, revenue, reviews, stars, link, ebay_price, ebay_url])
+	table.append([name.replace(';',' '), brand.replace(';',' '), category, rank, reviews, stars, sales, revenue, price, ebay_price, link, ebay_url])
 
 	with open(keyword.replace(' ', '_') + '_table' + str(pages) + '.csv','w', encoding = "utf-8-sig") as file:
 		for _rows in table:
