@@ -6,6 +6,7 @@ from nacl.encoding import HexEncoder as benc
 
 import argparse
 import getpass
+import json
 import time
 import sys
 
@@ -40,10 +41,10 @@ parser = argparse.ArgumentParser(
     description=description,
 	epilog='')
 
-parser.add_argument('-k','--key-type', action="store", help = 'Select a type of a key (only curve25519, P-256 and RSA are allowed)')
+parser.add_argument('-k','--key-type', action="store", help = 'Select a type of a key (only curve25519, P-256 and RSA are allowed)', required=True)
 parser.add_argument('-r','--rsa-size', action="store",  default = 2048, help = 'Select a size of RSA key')
-parser.add_argument('-b','--branches', action="store",  help = 'Type a branching policy, in a \'[number1,...,numberX]\' format.')
-parser.add_argument('-n','--number', action="store", help = 'Select a number of a key pair you want to use in a generated branched tree')
+parser.add_argument('-b','--branches', action="store",  help = 'Type a branching policy, in a \'[number1,...,numberX]\' format.', required=True)
+parser.add_argument('-n','--number', action="store", help = 'Select a number of a key pair you want to use in a generated branched tree', required=True)
 parser.add_argument('-a','--key-amount', action="store",  default = 100, help = 'Select a key amount. The bigger the number, the longer it\'ll take to generate keys (mostly for RSA, like 15 min for ten 4096 bit RSA keys).')
 args = parser.parse_args()
 
@@ -55,8 +56,8 @@ key_amount = int(args.key_amount)
 
 
 
-ps = 1
-while ps:	
+isPass = True
+while isPass:
 	printed('\nPlease enter your password:\n')
 	#new_pass_first = input('')
 	password = getpass.getpass('')
@@ -64,36 +65,51 @@ while ps:
 	#new_pass_second = input('')
 	pass_second = getpass.getpass('')
 	if password == pass_second:
-		ps = 0
+		isPass = False
 	else:
 		printed('Passwords are not the same. Try again.\n')
 
 printed('Generating your keys...\n')
-keys = make_me_keys(password  = password, type = key_type, key_amount = key_amount, size_rsa = rsa_size, branches = branches)
-key = dict(keys)[key_number]
 
-if key_type == 'curve25519':
-	sec = benc.encode(key.__bytes__()).decode()
-	pub = benc.encode(key.public_key.__bytes__()).decode()
+all_the_keys = []
 
-elif key_type == 'P-256':
-	sec = key.export_key(format='PEM')
-	pub = key._export_public_pem(compress = 0) #PEM
+for num_key in range(key_amount):
+	keys = make_me_keys(password  = password, type = key_type, key_amount = key_number, size_rsa = rsa_size, branches = branches)
+	#print('keys', keys)
+	key = dict(keys)[key_number]
+	all_the_keys.append(key)
 
-elif key_type == 'RSA':
-	sec = key.export_key().decode()
-	pub = key.publickey().export_key().decode()
 
-else:
-	print('How do you manage to do this?')
+decoded_keys_temp_list = []
+
+
+for the_key in all_the_keys:
+	if key_type == 'curve25519':
+		sec = benc.encode(key.__bytes__()).decode()
+		pub = benc.encode(key.public_key.__bytes__()).decode()
+		decoded_keys_temp_list.append({'secert' : sec, 'public' : pub})
+
+	elif key_type == 'P-256':
+		sec = key.export_key(format='PEM')
+		pub = key._export_public_pem(compress = 0) #PEM
+		decoded_keys_temp_list.append({'secert' : sec, 'public' : pub})
+
+	elif key_type == 'RSA':
+		sec = key.export_key().decode()
+		pub = key.publickey().export_key().decode()
+		decoded_keys_temp_list.append({'secert' : sec, 'public' : pub})
+
+
+decoded_keys = dict(list(enumerate(decoded_keys_temp_list, start=1)))
+
+j_keys = json.dumps(decoded_keys, indent=2, sort_keys=True)
+
 
 printed('\nWriting your keys to the file...\n')
 time_add = str(int(time.time()))
-with open(time_add + '_' + key_type + '.priv', 'w') as file:
-	file.write(sec)
+with open(time_add + '_' + key_type + '.json', 'w') as file:
+	file.write(j_keys)
 
-with open(time_add + '_' + key_type + '.pub', 'w') as file:
-	file.write(pub)
 
 printed('\nDone.\n')
 printed('\nMAKE SURE YOU INSTANTLY PUT YOUR PRIVATE KEY IN A SAFE PLACE AS IT\'S NOT ENCRYPTED!')
