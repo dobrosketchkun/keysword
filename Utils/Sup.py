@@ -1,7 +1,12 @@
-import hashlib
-import sys
 from time import sleep
+
+import hashlib
+import random
+import sys
+import time
 import argon2
+import platform
+import os
 
 def sha000(password, circles = 1, type = 'argon2'):
 	'''
@@ -38,3 +43,32 @@ def printed(text, time =0.02):
 		sleep(time)
 		sys.stdout.write(char)
 		sys.stdout.flush()
+
+
+def jsoned(decoded_keys_temp_list, key_type):
+	decoded_keys = dict(list(enumerate(decoded_keys_temp_list, start=1)))
+
+	j_keys = json.dumps(decoded_keys, indent=2, sort_keys=True)
+
+
+	printed('\nWriting your keys to the file...\n')
+	time_add = str(int(time.time()))
+	with open(time_add + '_' + key_type + '.json', 'w') as file:
+		file.write(j_keys)
+
+def separated(decoded_keys_temp_list, key_type):
+	for keys in decoded_keys_temp_list:
+		keys_text = keys['secret'] + '\n' + keys['public']
+		filename = str(int(time.time())) + str(random.random()) + '_' + key_type +  '.txt'
+		with open(filename,'w') as file:
+			file.write(keys_text)
+
+
+def clear_screen():
+    """
+    Clears the terminal screen.
+    """
+
+    # Clear command as function of OS
+    command = "cls" if platform.system().lower()=="windows" else "clear"
+    os.system(command)
