@@ -32,7 +32,7 @@ USE IT ONLY IF YOU KNOW WHAT ARE YOU DOING.
  |    _  ||   |___   |   |   _____| ||   _   ||       ||   |  | ||       |
  |___| |_||_______|  |___|  |_______||__| |__||_______||___|  |_||______| 
 
-You can generate a key pairs of curve25519, P-256 or RSA types from you STRONG password. By using branching (basically it's BIP-0032 look-a-like rip-off) and choose a particular number of key pair (up to 100 in default) in the branched state you can defend yourself from rainbow tables attack. Curve25519 will be in hex, P-256 and RSA in PEM armor.
+You can generate a key pairs of curve25519, P-256, RSA or bitcoin types from you STRONG password. By using branching (basically it's BIP-0032 look-a-like rip-off) and choose a particular number of key pair (up to 100 in default) in the branched state you can defend yourself from rainbow tables attack. Curve25519 will be in hex, P-256 and RSA in PEM armor.
 
 Examples:
 
@@ -48,12 +48,12 @@ parser = argparse.ArgumentParser(
     description=description,
 	epilog='')
 
-parser.add_argument('-k','--key-type', action="store", help = 'Select a type of a key (only curve25519, P-256 and RSA are allowed)', required=True)
+parser.add_argument('-k','--key-type', action="store", help = 'Select a type of a key (only curve25519, P-256, RSA or bitcoin are allowed)', required=True)
 parser.add_argument('-r','--rsa-size', action="store",  default = 2048, help = 'Select a size of RSA key')
 parser.add_argument('-b','--branches', action="store",  help = 'Type a branching policy, in a \'[number1,...,numberX]\' format.', required=True)
 parser.add_argument('-n','--number', action="store", help = 'Select a number of a key pair you want to use in a generated branched tree', required=True)
 parser.add_argument('-a','--key-amount', action="store",  default = 100, help = 'Select a key amount. The bigger the number, the longer it\'ll take to generate keys (mostly for RSA, like 15 min for ten 4096 bit RSA keys).')
-parser.add_argument('-f', '--save-type', action="store", default='json', help = 'You can choose "json" to save all the keys in one file in json format or "separated" to save pairs in separate txt files (first - secret, second - public).')
+parser.add_argument('-f', '--save-type', action="store", default='json', help = 'You can choose "json" to save all the keys in one file in json format or "separated" to save pairs in separate txt files (first - secret, second - public or address in case of bitcoin).')
 
 args = parser.parse_args()
 
@@ -64,6 +64,8 @@ key_number = int(args.number)
 key_amount = int(args.key_amount)
 file_type = args.save_type
 
+if key_type not in ['P-256', 'curve25519', 'RSA', 'bitcoin']:
+	raise ValueError('Only P-256, curve25519, RSA or bitcoin types are allowed. Your key type: ' + key_type)
 
 clear_screen()
 logo = '''
@@ -98,6 +100,7 @@ while isPass:
 		clear_screen()
 		print(logo)
 		printed('Passwords are not the same. Try again.\n')
+		time.sleep(2)
 
 
 clear_screen()
@@ -143,6 +146,15 @@ for the_key in all_the_keys:
 		pub = the_key.publickey().export_key().decode()
 		decoded_keys_temp_list.append({'secret' : sec, 'public' : pub})
 
+	elif key_type == 'bitcoin':
+		from bitcoin import encode_privkey, privkey_to_address
+		print('the_key',the_key)
+		sec = encode_privkey(the_key[:64],'wif_compressed')
+		print('sec',sec)
+		addr = privkey_to_address(the_key[:64])
+		print('addr',addr)
+		decoded_keys_temp_list.append({'secret' : sec, 'address' : addr})
+
 
 if file_type == 'json':
 	jsoned(decoded_keys_temp_list, key_type)
@@ -154,4 +166,4 @@ else:
 clear_screen()
 print(logo)
 printed('\nDone.\n')
-printed('\nMAKE SURE YOU INSTANTLY PUT YOUR PRIVATE KEY IN A SAFE PLACE AS IT\'S NOT ENCRYPTED!')
+printed('\nMAKE SURE YOU INSTANTLY PUT YOUR PRIVATE KEY IN A SAFE PLACE AS IT\'S NOT ENCRYPTED!\n')
