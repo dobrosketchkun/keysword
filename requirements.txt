@@ -2,3 +2,4 @@ pynacl
 pycryptodome
 argon2
 progressbar
+bitcoin
