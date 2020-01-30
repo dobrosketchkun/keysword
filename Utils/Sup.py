@@ -58,7 +58,10 @@ def jsoned(decoded_keys_temp_list, key_type):
 
 def separated(decoded_keys_temp_list, key_type):
 	for keys in decoded_keys_temp_list:
-		keys_text = keys['secret'] + '\n' + keys['public']
+		try:
+			keys_text = keys['secret'] + '\n' + keys['public']
+		except:
+			keys_text = keys['secret'] + '\n' + keys['address']
 		filename = str(int(time.time())) + str(random.random()) + '_' + key_type +  '.txt'
 		with open(filename,'w') as file:
 			file.write(keys_text)
