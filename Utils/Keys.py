@@ -90,6 +90,37 @@ def make_rsa_keys_branched(password, salt, size = 2048, key_amount = 1, branches
 	return list(enumerate(keys, start=1))	
 	
 
+
+def make_bitcoin_keys_branched(password, salt, key_amount = 1, branches = [410]):
+	'''
+	Make multiple bitcoin private keys at once from any string
+	Brances implements additional layer of security. Branch is better be an integer, but, for real, it may be any string
+	Returns a list
+	'''
+	# password = sha000(password, 50)
+	# salt = SHA256.new(password.encode()).digest()
+	#print('salt',benc.encode(salt))
+	count = int(str(int(benc.encode(salt),16))[0:5])
+
+	master_key = PBKDF2(password, salt = str(salt), count=count) 
+	
+	def my_rand(n):
+		my_rand.counter += 1
+		return PBKDF2(master_key, "my_rand:%d" % my_rand.counter, dkLen=n, count=1)
+	my_rand.counter = 0
+	
+	keys = []
+	with progressbar.ProgressBar(max_value=key_amount) as bar_small:
+		for tymes in range(key_amount):
+			bar_small.update(tymes)
+			key = PBKDF2(password,dkLen=64, salt = (str(salt) + str(branches[tymes%len(branches)])), count = count)
+			#keys.append(ECC.generate(curve = 'P-256', randfunc=my_rand))
+			keys.append(key.hex())
+			password = key
+	return list(enumerate(keys, start=1))
+
+
+
 def make_me_keys(password, salt, type, key_amount = 1, size_rsa = 2048, branches = [410]):
 	'''
 	Make key pairs for RSA, P-256 or curve25519 in amounts from any string
@@ -97,11 +128,13 @@ def make_me_keys(password, salt, type, key_amount = 1, size_rsa = 2048, branches
 	Returns a list
 	'''
 	if type == 'P-256':
-		return make_p256_keys_pbkdf2_branched(password, salt, key_amount = key_amount, branches = branches)
+		return make_p256_keys_pbkdf2_branched(password=password, salt=salt, key_amount = key_amount, branches = branches)
 	elif type == 'curve25519':
-		return make_curve25519_keys_pbkdf2_branched(password, salt, key_amount = key_amount, branches = branches)
+		return make_curve25519_keys_pbkdf2_branched(password=password, salt=salt, key_amount = key_amount, branches = branches)
 	elif type == 'RSA':
-		return make_rsa_keys_branched(password, salt, size = size_rsa, key_amount = key_amount, branches = branches)
+		return make_rsa_keys_branched(password=password, salt=salt, size = size_rsa, key_amount = key_amount, branches = branches)
+	elif type == 'bitcoin':
+		return make_bitcoin_keys_branched(password=password, salt=salt, key_amount = key_amount, branches = branches)
 	else:
 		print('type:', type,'\n')
-		raise ValueError('Only P-256, curve25519 or RSA types are allowed.')	
+		raise ValueError('Only P-256, curve25519, RSA or bitcoin types are allowed.')	
