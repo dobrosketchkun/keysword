@@ -6,6 +6,7 @@ import sys
 import time
 import argon2
 import platform
+import json
 import os
 
 def sha000(password, circles = 1, type = 'argon2'):
