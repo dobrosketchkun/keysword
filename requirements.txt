@@ -1,5 +1,5 @@
 pynacl
 pycryptodome
 argon2-cffi
-progressbar
+progressbar2
 bitcoin
