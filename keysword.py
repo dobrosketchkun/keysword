@@ -6,9 +6,6 @@ from nacl.encoding import HexEncoder as benc
 from Crypto.Hash import SHA256
 from Utils.Sup import sha000, clear_screen
 
-
-
-
 import progressbar
 import argparse
 import getpass
@@ -112,7 +109,7 @@ all_the_keys = []
 
 with progressbar.ProgressBar(max_value=key_amount, redirect_stdout=True) as bar:
 	for num_key in range(key_amount):
-		print('key', str(num_key + 1) + ':')
+		print('key', str(num_key + 1) + '/' + str(key_amount) + ':')
 		bar.update(num_key+1)
 		paper = str(SHA256.new(str(num_key).encode()).digest())
 		password = sha000(password + paper, 50)
