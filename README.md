@@ -19,10 +19,10 @@ USE IT ONLY IF YOU KNOW WHAT ARE YOU DOING.
  |    _  ||   |___   |   |   _____| ||   _   ||       ||   |  | ||       |
  |___| |_||_______|  |___|  |_______||__| |__||_______||___|  |_||______| 
 
-You can generate a key pairs of curve25519, P-256 or RSA types from you STRONG password. 
-By using branching (basically it's BIP-0032 look-a-like rip-off) and choose a particular
-number of key pair (up to 100 in default) in the branched state you can defend yourself 
-from rainbow tables attack. Curve25519 will be in hex, P-256 and RSA in PEM armor.
+You can generate a key pairs of curve25519, P-256, RSA or bitcoin types from you STRONG password. 
+By using branching (basically it's BIP-0032 look-a-like rip-off) and choose a particular number 
+of key pair (up to 100 in default) in the branched state you can defend yourself from rainbow 
+tables attack. Curve25519 will be in hex, P-256 and RSA in PEM armor.
 
 Examples:
 
@@ -34,8 +34,8 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
 optional arguments:
   -h, --help            show this help message and exit
   -k KEY_TYPE, --key-type KEY_TYPE
-                        Select a type of a key (only curve25519, P-256 and RSA
-                        are allowed)
+                        Select a type of a key (only curve25519, P-256, RSA or
+                        bitcoin are allowed)
   -r RSA_SIZE, --rsa-size RSA_SIZE
                         Select a size of RSA key
   -b BRANCHES, --branches BRANCHES
@@ -51,6 +51,7 @@ optional arguments:
   -f SAVE_TYPE, --save-type SAVE_TYPE
                         You can choose "json" to save all the keys in one file
                         in json format or "separated" to save pairs in
-                        separate txt files (first - secret, second - public).
+                        separate txt files (first - secret, second - public or
+                        address in case of bitcoin).
 
   ```
