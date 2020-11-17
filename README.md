@@ -55,3 +55,6 @@ optional arguments:
                         address in case of bitcoin).
 
   ```
+
+
+[protip for PGP](http://manpages.ubuntu.com/manpages/focal/en/man1/pem2openpgp.1.html)
