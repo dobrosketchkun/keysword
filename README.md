@@ -2,7 +2,7 @@
 
 ## Description
 
-Keysword is a Python script that generates cryptographic key pairs (Curve25519, P-256, RSA, or Bitcoin keys) derived deterministically from a user-provided password. By utilizing a branching mechanism and key indexing, it creates multiple keys to enhance security against attacks like rainbow tables.
+Keysword is a Python script that generates cryptographic key pairs (Curve25519, P-256, RSA, or Bitcoin keys) deterministically from a user-provided password or raw file data. By utilizing a branching mechanism and key indexing, it creates multiple keys to enhance security against attacks like rainbow tables.
 
 ---
 
@@ -20,7 +20,7 @@ Keysword is a Python script that generates cryptographic key pairs (Curve25519, 
 
 ## Features
 
-- Generate key pairs deterministically from a strong password.
+- Generate key pairs deterministically from a strong password or any file.
 - Supports Curve25519, P-256, RSA, and Bitcoin keys.
 - Implements a branching mechanism to enhance security.
 - Keys can be saved in JSON format or as separate files.
@@ -55,42 +55,60 @@ python keysword.py -k KEY_TYPE -b BRANCHES -n NUMBER [options]
 - `-r`, `--rsa-size`: RSA key size (default: `2048`).
 - `-a`, `--key-amount`: Number of keys to generate (default: `1`).
 - `-f`, `--save-type`: Save format. Options: `json` (default), `separated`.
+- `-pfile`, `--password-file`: Path to a file. Use the raw file data as the password input.
 
 ### Examples
 
+Generate a Curve25519 key:
+
 ```bash
 python keysword.py -k curve25519 -b '[1,4333,45453,64,99,3245]' -n 77
-python keysword.py -k RSA -r 1024 -b '[410,111,123]' -n 12
-python keysword.py -k P-256 -b '[1,4100,4773,199,7445]' -n 168 -a 1000
-python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
+```
+
+Generate RSA keys with a 1024-bit key size and use a file for password input:
+
+```bash
+python keysword.py -k RSA -r 1024 -b '[410,111,123]' -n 12 -pfile /path/to/password_file
+```
+
+Generate multiple P-256 keys with branching and save them in separate text files:
+
+```bash
+python keysword.py -k P-256 -b '[1,4100,4773,199,7445]' -n 168 -a 1000 -f separated
+```
+
+Generate Bitcoin keys using a file as the password:
+
+```bash
+python keysword.py -k bitcoin -b '[111]' -n 77 -a 10 -pfile /path/to/datafile
 ```
 
 ## How It Works
 
-The **Keysword** script generates cryptographic key pairs deterministically from a user-provided password by utilizing key derivation functions and a branching mechanism. Here's an overview of how it works:
+The **Keysword** script generates cryptographic key pairs deterministically from either a user-provided password or raw file data by utilizing key derivation functions and a branching mechanism. Here's an overview of how it works:
 
 ### 1. Password Input
 
-- The script prompts the user to enter a password twice to ensure accuracy.
-- The `getpass` module is used to securely input the password without displaying it on the screen.
+- You can provide a password by typing it, or you can use any file's raw data as the password by specifying `-pfile`.
+- If a file is used, the script reads the file in binary mode and uses the raw data as the password.
 
 ### 2. Key Derivation (`sha000` Function)
 
-- **Purpose:** To derive a secure key from the user's password.
+- **Purpose:** To derive a secure key from the user's password or file data.
 - **Method:**
   - Uses the **Argon2** key derivation function (KDF) from the `argon2` library.
   - **Parameters:**
     - `iterations`: Number of times the Argon2 function is applied (default is 1).
     - `time_cost`, `memory_cost`, `parallelism`: Parameters defining the computational expense of the function.
   - **Salt Generation:**
-    - A salt is derived from the password using SHA-256 hashing (`hashlib.sha256(password.encode()).digest()`).
-    - Note: While using a password-derived salt isn't ideal, it maintains the deterministic nature of the key generation.
+    - A salt is derived from the password or file data using SHA-256 hashing (`hashlib.sha256(password.encode() or password).digest()`).
+    - The determinism of this salt helps maintain repeatable key generation.
 - **Output:**
   - The function returns a hexadecimal representation of the derived key.
 
 ### 3. Branching Mechanism
 
-- **Purpose:** To enhance security by generating multiple keys from the same password.
+- **Purpose:** To enhance security by generating multiple keys from the same password or file data.
 - **Method:**
   - The user provides a list of branches (e.g., `[1,4100,4773]`).
   - For each key, the script combines the password with each branch value to create a unique salt for the PBKDF2 function.
@@ -147,13 +165,13 @@ The **Keysword** script generates cryptographic key pairs deterministically from
 ## Security Considerations
 
 - **Deterministic Generation:**
-  - Keys are generated deterministically from the password and branch values.
-  - If someone knows your password and branching strategy, they can regenerate your keys.
+  - Keys are generated deterministically from the password (or file data) and branch values.
+  - If someone knows your password or file and branching strategy, they can regenerate your keys.
 - **Password Strength:**
-  - Use a strong, unique password to prevent brute-force or dictionary attacks.
-  - Longer passwords with a mix of characters increase security.
+  - Use a strong, unique password (or large, random file) to prevent brute-force or dictionary attacks.
+  - Longer passwords or high-entropy files increase security.
 - **No External Salt:**
-  - The script derives salts from the password to maintain determinism.
+  - The script derives salts from the password or file data to maintain determinism.
   - Be aware that this is less secure than using random, unique salts.
 - **Private Key Safety:**
   - Private keys are saved in plaintext.
@@ -239,4 +257,4 @@ By converting your RSA keys to OpenPGP format, you can use them in a wider varie
 
 ## Conclusion
 
-The **Keysword** script allows users to generate cryptographic key pairs solely from a password, using deterministic methods enhanced by a branching mechanism. This can be useful in scenarios where users need to recreate keys without storing them but comes with significant security considerations that must be carefully managed.
+The **Keysword** script allows users to generate cryptographic key pairs solely from a password or any file, using deterministic methods enhanced by a branching mechanism. This can be useful in scenarios where users need to recreate keys without storing them but comes with significant security considerations that must be carefully managed.
