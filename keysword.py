@@ -27,9 +27,13 @@ def sha000(password, iterations=1, time_cost=3, memory_cost=102400, parallelism=
     '''
     # Since we can't use an external salt, we'll derive a salt from the password.
     # This is not ideal, but necessary given the constraints.
-    salt = hashlib.sha256(password.encode()).digest()
+    if isinstance(password, str):
+        password_bytes = password.encode()
+    else:
+        password_bytes = password
+    salt = hashlib.sha256(password_bytes).digest()
     hash = argon2.low_level.hash_secret_raw(
-        secret=password.encode(),
+        secret=password_bytes,
         salt=salt,
         time_cost=time_cost * iterations,
         memory_cost=memory_cost,
@@ -37,7 +41,7 @@ def sha000(password, iterations=1, time_cost=3, memory_cost=102400, parallelism=
         hash_len=32,
         type=argon2.low_level.Type.ID
     )
-    return hash.hex()
+    return hash
 
 def printed(text, delay=0.02, chunk_size=1):
     '''
@@ -89,14 +93,22 @@ def make_curve25519_keys_pbkdf2_branched(password, key_amount=1, branches=[410])
     # Fixed iteration count for consistent security
     count = 200000
     dkLen = 32
+    if isinstance(password, str):
+        password_bytes = password.encode()
+    else:
+        password_bytes = password
     with progressbar.ProgressBar(max_value=key_amount) as bar_small:
         for index in range(key_amount):
             bar_small.update(index)
             branch = str(branches[index % len(branches)])
-            salt = (password + branch).encode()
-            key_material = PBKDF2(password, salt=salt, dkLen=dkLen, count=count, hmac_hash_module=SHA256)
+            if isinstance(branch, str):
+                branch_bytes = branch.encode()
+            else:
+                branch_bytes = branch
+            salt = password_bytes + branch_bytes
+            key_material = PBKDF2(password_bytes, salt=salt, dkLen=dkLen, count=count, hmac_hash_module=SHA256)
             keys.append(PrivateKey(key_material))
-            password = key_material.hex()
+            password_bytes = key_material
     return list(enumerate(keys, start=1))
 
 def make_p256_keys_pbkdf2_branched(password, key_amount=1, branches=[410]):
@@ -105,15 +117,23 @@ def make_p256_keys_pbkdf2_branched(password, key_amount=1, branches=[410]):
     '''
     keys = []
     count = 200000
+    if isinstance(password, str):
+        password_bytes = password.encode()
+    else:
+        password_bytes = password
     with progressbar.ProgressBar(max_value=key_amount) as bar_small:
         for index in range(key_amount):
             bar_small.update(index)
             branch = str(branches[index % len(branches)])
-            salt = (password + branch).encode()
-            seed = PBKDF2(password, salt=salt, dkLen=32, count=count, hmac_hash_module=SHA256)
+            if isinstance(branch, str):
+                branch_bytes = branch.encode()
+            else:
+                branch_bytes = branch
+            salt = password_bytes + branch_bytes
+            seed = PBKDF2(password_bytes, salt=salt, dkLen=32, count=count, hmac_hash_module=SHA256)
             int_seed = Integer.from_bytes(seed) % ECC._curves['P-256'].order
             keys.append(ECC.construct(curve='P-256', d=int_seed))
-            password = seed.hex()
+            password_bytes = seed
     return list(enumerate(keys, start=1))
 
 
@@ -137,12 +157,20 @@ def make_rsa_keys_branched(password, size=2048, key_amount=1, branches=[410]):
     '''
     keys = []
     count = 100000  # Reduced for performance considerations
+    if isinstance(password, str):
+        password_bytes = password.encode()
+    else:
+        password_bytes = password
     with progressbar.ProgressBar(max_value=key_amount) as bar_small:
         for index in range(key_amount):
             bar_small.update(index)
             branch = str(branches[index % len(branches)])
-            salt = (password + branch).encode()
-            seed = PBKDF2(password, salt=salt, dkLen=64, count=count, hmac_hash_module=SHA256)
+            if isinstance(branch, str):
+                branch_bytes = branch.encode()
+            else:
+                branch_bytes = branch
+            salt = password_bytes + branch_bytes
+            seed = PBKDF2(password_bytes, salt=salt, dkLen=64, count=count, hmac_hash_module=SHA256)
 
             # Initialize the deterministic random generator
             drbg = DeterministicRandom(seed)
@@ -150,7 +178,7 @@ def make_rsa_keys_branched(password, size=2048, key_amount=1, branches=[410]):
 
             # Generate the RSA key using the deterministic randfunc
             keys.append(RSA.generate(size, randfunc=randfunc))
-            password = seed.hex()
+            password_bytes = seed
     return list(enumerate(keys, start=1))
 
 
@@ -160,14 +188,22 @@ def make_bitcoin_keys_branched(password, key_amount=1, branches=[410]):
     '''
     keys = []
     count = 200000
+    if isinstance(password, str):
+        password_bytes = password.encode()
+    else:
+        password_bytes = password
     with progressbar.ProgressBar(max_value=key_amount) as bar_small:
         for index in range(key_amount):
             bar_small.update(index)
             branch = str(branches[index % len(branches)])
-            salt = (password + branch).encode()
-            key_material = PBKDF2(password, salt=salt, dkLen=32, count=count, hmac_hash_module=SHA256)
+            if isinstance(branch, str):
+                branch_bytes = branch.encode()
+            else:
+                branch_bytes = branch
+            salt = password_bytes + branch_bytes
+            key_material = PBKDF2(password_bytes, salt=salt, dkLen=32, count=count, hmac_hash_module=SHA256)
             keys.append(key_material.hex())
-            password = key_material.hex()
+            password_bytes = key_material
     return list(enumerate(keys, start=1))
 
 def make_me_keys(password, key_type, key_amount=1, size_rsa=2048, branches=[410]):
@@ -197,12 +233,12 @@ USE IT ONLY IF YOU KNOW WHAT YOU ARE DOING.
  |    _  ||   |___   |   |   _____| ||   _   ||       ||   |  | ||       |
  |___| |_||_______|  |___|  |_______||__| |__||_______||___|  |_||______| 
 
-You can generate key pairs of Curve25519, P-256, RSA, or Bitcoin types from your STRONG password. By using branching (similar to BIP-0032), and choosing a particular number of key pairs (up to 100 by default) in the branched state, you can defend yourself from rainbow table attacks. Curve25519 will be in hex, P-256 and RSA in PEM format.
+You can generate key pairs of Curve25519, P-256, RSA, or Bitcoin types from your STRONG password or any file. By using branching (similar to BIP-0032), and choosing a particular number of key pairs (up to 100 by default) in the branched state, you can defend yourself from rainbow table attacks. Curve25519 will be in hex, P-256 and RSA in PEM format.
 
 Examples:
 
 python keysword.py -k curve25519 -b '[1,4333,45453,64,99,3245]' -n 77
-python keysword.py -k RSA -r 1024 -b '[410,111,123]' -n 12
+python keysword.py -k RSA -r 1024 -b '[410,111,123]' -n 12 -pfile myfile.bin
 python keysword.py -k P-256 -b '[1,4100,4773,199,7445]' -n 168 -a 1000
 python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
 '''
@@ -219,6 +255,7 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
     parser.add_argument('-n', '--number', action="store", help='Select the key pair number you want to use in the generated branched tree', required=True)
     parser.add_argument('-a', '--key-amount', action="store", default=1, help='Select a key amount. The larger the number, the longer it will take to generate keys (especially for RSA).')
     parser.add_argument('-f', '--save-type', action="store", default='json', help='Choose "json" to save all the keys in one file in JSON format or "separated" to save pairs in separate txt files (first - secret, second - public or address in case of Bitcoin).')
+    parser.add_argument('-pfile', '--password-file', action="store", help='Use a file as password input (raw data of the file will be used)')
 
     args = parser.parse_args()
 
@@ -228,6 +265,7 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
     key_number = int(args.number)
     key_amount = int(args.key_amount)
     file_type = args.save_type
+    password_file = args.password_file
 
     if key_type not in ['P-256', 'curve25519', 'RSA', 'bitcoin']:
         raise ValueError('Only P-256, curve25519, RSA, or bitcoin types are allowed. Your key type: ' + key_type)
@@ -246,22 +284,35 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
     printed(logo, delay=0.01, chunk_size=10)
 
     # Password input with confirmation
-    while True:
-        clear_screen()
-        print(logo)
-        printed('Please enter your password:\n')
-        password = getpass.getpass('')
-        clear_screen()
-        print(logo)
-        printed('Please enter it again:\n')
-        pass_second = getpass.getpass('')
-        if password == pass_second:
-            break
-        else:
+    if password_file:
+        try:
+            with open(password_file, 'rb') as f:
+                password = f.read()
             clear_screen()
             print(logo)
-            printed('Passwords do not match. Try again.\n')
-            time.sleep(2)
+            printed('Password has been read from the file successfully.\n')
+        except Exception as e:
+            clear_screen()
+            print(logo)
+            printed(f'Error reading password file: {e}\n')
+            sys.exit(1)
+    else:
+        while True:
+            clear_screen()
+            print(logo)
+            printed('Please enter your password:\n')
+            password = getpass.getpass('').encode()
+            clear_screen()
+            print(logo)
+            printed('Please enter it again:\n')
+            pass_second = getpass.getpass('').encode()
+            if password == pass_second:
+                break
+            else:
+                clear_screen()
+                print(logo)
+                printed('Passwords do not match. Try again.\n')
+                time.sleep(2)
 
     clear_screen()
     print(logo)
@@ -272,7 +323,12 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
     with progressbar.ProgressBar(max_value=key_amount, redirect_stdout=True) as bar:
         for num_key in range(key_amount):
             bar.update(num_key + 1)
-            password = sha000(password + str(num_key), iterations=2)
+            if isinstance(password, str):
+                password_bytes = password.encode()
+            else:
+                password_bytes = password
+            password_hash = sha000(password_bytes + str(num_key).encode(), iterations=2)
+            password = password_hash  # password is bytes
             keys = make_me_keys(password=password, key_type=key_type, key_amount=key_number, size_rsa=rsa_size, branches=branches)
             key = dict(keys)[key_number]
             all_the_keys.append(key)
@@ -285,8 +341,8 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
             pub = benc.encode(the_key.public_key.__bytes__()).decode()
             decoded_keys_temp_list.append({'secret': sec, 'public': pub})
         elif key_type == 'P-256':
-            sec = the_key.export_key(format='PEM')
-            pub = the_key.public_key().export_key(format='PEM')
+            sec = the_key.export_key(format='PEM').decode()
+            pub = the_key.public_key().export_key(format='PEM').decode()
             decoded_keys_temp_list.append({'secret': sec, 'public': pub})
         elif key_type == 'RSA':
             sec = the_key.export_key().decode()
