@@ -69,6 +69,12 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
     argon2_group.add_argument('--time-cost', type=int, help='Argon2 time cost parameter (default: 3)')
     argon2_group.add_argument('--memory-cost', type=int, help='Argon2 memory cost in KiB (default: 102400)')
     argon2_group.add_argument('--parallelism', type=int, help='Argon2 parallelism parameter (default: 8)')
+    
+    # Performance options
+    perf_group = parser.add_argument_group('Performance Options', 'Optimize key generation speed')
+    perf_group.add_argument('--parallel', action='store_true', help='Use parallel processing for multiple keys (automatic for 4+ keys)')
+    perf_group.add_argument('--workers', type=int, help='Number of parallel workers (default: CPU count)')
+    perf_group.add_argument('--deterministic-names', action='store_true', help='Use deterministic filenames based on configuration (reproducible naming)')
 
     args = parser.parse_args()
 
@@ -260,18 +266,67 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
 
     all_the_keys = []
 
-    with progressbar.ProgressBar(max_value=key_amount, redirect_stdout=True) as bar:
-        for num_key in range(key_amount):
-            bar.update(num_key + 1)
-            if isinstance(password, str):
-                password_bytes = password.encode()
-            else:
-                password_bytes = password
-            password_hash = derive_key(password_bytes + str(num_key).encode(), iterations=2, **kdf_params)
-            password = password_hash  # password is bytes
-            keys = make_me_keys(password=password, key_type=key_type, key_amount=key_number, size_rsa=rsa_size, branches=branches)
-            key = dict(keys)[key_number]
-            all_the_keys.append(key)
+    # Determine if parallel processing should be used
+    from keysword.core.parallel import should_use_parallel, generate_keys_parallel
+    use_parallel = args.parallel or should_use_parallel(key_amount, key_type)
+    
+    if use_parallel and key_amount > 1:
+        # Use parallel processing
+        num_workers = args.workers if args.workers else None
+        if not args.no_warnings:
+            import multiprocessing as mp
+            actual_workers = num_workers if num_workers else min(mp.cpu_count(), key_amount)
+            print(f"Using parallel processing with {actual_workers} workers...\n")
+        
+        # Progress callback for tqdm
+        try:
+            from tqdm import tqdm
+            pbar = tqdm(total=key_amount, desc="Generating keys", unit="key")
+            
+            def progress_callback(current, total):
+                pbar.update(1)
+            
+            all_the_keys = generate_keys_parallel(
+                password=password,
+                key_type=key_type,
+                key_amount=key_amount,
+                branches=branches,
+                key_number=key_number,
+                rsa_size=rsa_size,
+                num_workers=num_workers,
+                kdf_params=kdf_params,
+                progress_callback=progress_callback
+            )
+            pbar.close()
+        except ImportError:
+            # Fall back to progressbar if tqdm not available
+            print("Generating keys in parallel...")
+            all_the_keys = generate_keys_parallel(
+                password=password,
+                key_type=key_type,
+                key_amount=key_amount,
+                branches=branches,
+                key_number=key_number,
+                rsa_size=rsa_size,
+                num_workers=num_workers,
+                kdf_params=kdf_params
+            )
+    else:
+        # Sequential generation with enhanced progress bar
+        from keysword.utils.progress import EnhancedProgressBar
+        
+        with EnhancedProgressBar(key_amount, desc="Generating keys", unit="key") as pbar:
+            for num_key in range(key_amount):
+                if isinstance(password, str):
+                    password_bytes = password.encode()
+                else:
+                    password_bytes = password
+                password_hash = derive_key(password_bytes + str(num_key).encode(), iterations=2, **kdf_params)
+                password = password_hash  # password is bytes
+                keys = make_me_keys(password=password, key_type=key_type, key_amount=key_number, size_rsa=rsa_size, branches=branches)
+                key = dict(keys)[key_number]
+                all_the_keys.append(key)
+                pbar.update(1)
 
     # Verify mode: validate keys without saving
     if args.verify:
@@ -370,9 +425,11 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
                 decoded_keys_temp_list.append({'secret': sec, 'address': addr})
 
     if file_type == 'json':
-        jsoned(decoded_keys_temp_list, key_type, encrypt=args.encrypt, force=args.force, auto_rename=args.auto_rename)
+        jsoned(decoded_keys_temp_list, key_type, encrypt=args.encrypt, force=args.force, auto_rename=args.auto_rename,
+               deterministic_names=args.deterministic_names, branches=branches, key_number=key_number, key_amount=key_amount)
     elif file_type == 'separated':
-        separated(decoded_keys_temp_list, key_type, encrypt=args.encrypt, force=args.force, auto_rename=args.auto_rename)
+        separated(decoded_keys_temp_list, key_type, encrypt=args.encrypt, force=args.force, auto_rename=args.auto_rename,
+                  deterministic_names=args.deterministic_names, branches=branches, key_number=key_number, key_amount=key_amount)
     else:
         printed('Wrong file type. You can only use "json" and "separated" types')
 

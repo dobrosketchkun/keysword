@@ -31,6 +31,7 @@ classifiers = [
 
 dependencies = [
     "progressbar2",
+    "tqdm",
     "argon2-cffi",
     "pycryptodome",
     "PyNaCl",
