@@ -33,7 +33,6 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
         description=description,
         epilog='')
 
-    parser.add_argument('-i', '--interactive', action="store_true", help='Launch interactive mode with TUI wizard')
     parser.add_argument('-k', '--key-type', action="store", help='Select a type of key: curve25519, P-256, RSA, bitcoin, ed25519, secp256k1, ethereum')
     parser.add_argument('-r', '--rsa-size', action="store", default=2048, help='Select a size of RSA key')
     parser.add_argument('--export-format', choices=['default', 'all', 'pem', 'der', 'openssh', 'hex', 'base64'], default='default', help='Export format for keys')

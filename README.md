@@ -69,23 +69,22 @@ The interactive mode provides:
 
 ### Command-Line Mode (Advanced)
 
-Run the script using Python and provide the necessary arguments:
+Provide CLI arguments to prefill values in the interactive wizard:
 
 ```bash
 python keysword.py -k KEY_TYPE -b BRANCHES -n NUMBER [options]
 ```
 
+The TUI will launch with these values pre-filled, skipping those steps and only asking for what's missing (like password).
+
 ### Arguments
 
-#### Required (for CLI mode):
+#### Optional (prefill values):
 - `-k`, `--key-type`: Type of key - `curve25519`, `P-256`, `RSA`, `bitcoin`, `ed25519`, `secp256k1`, `ethereum`
 - `-b`, `--branches`: Branching policy - `'[number1,number2,...]'`
 - `-n`, `--number`: Key pair number from the branched tree
-
-#### Optional:
-- `-i`, `--interactive`: Launch interactive TUI mode (no other args needed)
+- `-a`, `--key-amount`: Number of final keys to generate (default: `1`)
 - `-r`, `--rsa-size`: RSA key size in bits (default: `2048`)
-- `-a`, `--key-amount`: Number of keys to generate (default: `1`)
 - `-f`, `--save-type`: Save format - `json` or `separated` (default: `json`)
 - `-pfile`, `--password-file`: Use file data as password
 - `--encrypt`: Encrypt output files with AES-256-GCM
@@ -261,44 +260,45 @@ python keysword.py -k RSA -r 2048 -b '[1,2,3]' -n 1 -f separated
 
 This will generate separate files containing the private and public RSA keys in PEM format.
 
-### 3. Convert the Private Key
+### 3. Convert the Private Key to OpenPGP
 
-Once you have the private key in PEM format, you can use `pem2openpgp` to convert it to OpenPGP format.
+`pem2openpgp` converts a **private RSA PEM key** to OpenPGP format. It automatically generates both public and private key components in the OpenPGP certificate.
 
-```bash
-pem2openpgp -i private_key.pem -o private_key.gpg
-```
-
-In this example:
-- `-i` specifies the input PEM file (`private_key.pem`).
-- `-o` specifies the output file in OpenPGP format (`private_key.gpg`).
-
-### 4. Convert the Public Key
-
-Similarly, you can convert the public key from PEM format to OpenPGP format:
+**Important:** `pem2openpgp` only works with:
+- RSA keys (not ECC/Ed25519/etc.)
+- Unencrypted private keys (no passphrase)
+- Private PEM keys only (it extracts the public key automatically)
 
 ```bash
-pem2openpgp -i public_key.pem -o public_key.gpg
+pem2openpgp "Your Name <your@email.com>" < private_key_secret.txt > openpgp_key.gpg
 ```
 
-### 5. Import the OpenPGP Key to GnuPG
-
-After converting the key, you can import it into GnuPG for use with OpenPGP:
+Or with piping:
 
 ```bash
-gpg --import private_key.gpg
-gpg --import public_key.gpg
+cat private_key_secret.txt | pem2openpgp "Your Name" | gpg --import
 ```
 
-### 6. Verify the Keys
+**Note:** You do NOT need to separately convert the public key - `pem2openpgp` generates the complete OpenPGP certificate (public + private) from just the private PEM key.
 
-After importing, you can list your GnuPG keys to verify that the conversion was successful:
+### 4. Import the OpenPGP Key to GnuPG
+
+After converting, import it into GnuPG:
 
 ```bash
-gpg --list-keys
+gpg --import openpgp_key.gpg
 ```
 
-This should show your newly imported OpenPGP key.
+### 5. Verify the Keys
+
+List your GnuPG keys to verify the import:
+
+```bash
+gpg --list-keys         # List public keys
+gpg --list-secret-keys  # List private keys
+```
+
+Both should show your newly imported OpenPGP key.
 
 ### Notes:
 
@@ -362,7 +362,7 @@ Install as a package:
 pip install -e .
 
 # Then use as command
-keysword -i
+keysword 
 ```
 
 ## Project Structure
@@ -381,9 +381,6 @@ keysword/
 └── requirements.txt   # Dependencies
 ```
 
-## Contributing
-
-Issues and pull requests welcome. Please ensure tests pass before submitting.
 
 ## License
 
