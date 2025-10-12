@@ -89,7 +89,9 @@ The TUI will launch with these values pre-filled, skipping those steps and only 
 - `-pfile`, `--password-file`: Use file data as password
 - `--encrypt`: Encrypt output files with AES-256-GCM
 - `--mnemonic`: Use BIP39 mnemonic phrase as password
+- `--mnemonic-language`: BIP39 language (default: english)
 - `--generate-mnemonic`: Generate a new BIP39 mnemonic and exit
+- `--list-languages`: List all supported BIP39 languages and exit
 - `--verify`: Verify keys without saving
 - `--export-format`: Export format - `default`, `all`, `pem`, `der`, `openssh`, `hex`, `base64`
 - `--parallel`: Use parallel processing for multiple keys
@@ -136,8 +138,14 @@ python keysword.py -k RSA -r 4096 -b '[9999,8888,7777]' -n 1 --preset paranoid -
 
 #### Utility Commands
 ```bash
-# Generate a BIP39 mnemonic phrase
+# List supported mnemonic languages
+python keysword.py --list-languages
+
+# Generate a BIP39 mnemonic phrase (English)
 python keysword.py --generate-mnemonic
+
+# Generate a BIP39 mnemonic in Chinese
+python keysword.py --generate-mnemonic --mnemonic-language chinese_simplified
 
 # Decrypt an encrypted file
 python keysword.py --decrypt-file mykeys.json.enc

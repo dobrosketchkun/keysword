@@ -43,7 +43,8 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
     parser.add_argument('-pfile', '--password-file', action="store", help='Use a file as password input (raw data of the file will be used)')
     parser.add_argument('--mnemonic', action="store_true", help='Use BIP39 mnemonic phrase as password input')
     parser.add_argument('--generate-mnemonic', action="store_true", help='Generate a new BIP39 mnemonic phrase and exit')
-    parser.add_argument('--mnemonic-language', default='english', help='Language for BIP39 mnemonic (default: english)')
+    parser.add_argument('--mnemonic-language', default='english', help='Language for BIP39 mnemonic (default: english, use --list-languages to see all)')
+    parser.add_argument('--list-languages', action="store_true", help='List all supported BIP39 mnemonic languages and exit')
     
     # Encryption options
     encrypt_group = parser.add_argument_group('Encryption Options', 'Encrypt output files for additional security')
@@ -77,6 +78,22 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
 
     # Handle special modes that don't use interactive TUI
     
+    # Handle list languages mode
+    if args.list_languages:
+        from keysword.io.readers import get_supported_languages
+        
+        languages = sorted(get_supported_languages())
+        print("\nSupported BIP39 Mnemonic Languages:")
+        print("=" * 50)
+        for lang in languages:
+            print(f"  • {lang}")
+        print("=" * 50)
+        print(f"\nTotal: {len(languages)} languages")
+        print("\nUsage example:")
+        print("  python keysword.py --generate-mnemonic --mnemonic-language chinese_simplified")
+        print("  python keysword.py -k RSA -b '[1,2,3]' -n 1 --mnemonic --mnemonic-language spanish\n")
+        return
+    
     # Handle mnemonic generation mode
     if args.generate_mnemonic:
         from keysword.io.readers import generate_mnemonic
@@ -85,7 +102,12 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
         print(f"Language: {args.mnemonic_language}")
         print(f"Strength: 256 bits (24 words)\n")
         
-        mnemonic_phrase = generate_mnemonic(strength=256, language=args.mnemonic_language)
+        try:
+            mnemonic_phrase = generate_mnemonic(strength=256, language=args.mnemonic_language)
+        except ValueError as e:
+            print(f"Error: {e}")
+            print("\nUse --list-languages to see all supported languages.\n")
+            sys.exit(1)
         
         print("=" * 70)
         print("YOUR BIP39 MNEMONIC PHRASE:")

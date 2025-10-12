@@ -69,18 +69,39 @@ def read_mnemonic(language='english'):
     return seed
 
 
+def get_supported_languages():
+    """
+    Get list of supported BIP39 mnemonic languages.
+    
+    Returns:
+        list: List of supported language codes
+    """
+    from mnemonic import Mnemonic
+    return Mnemonic.list_languages()
+
+
 def generate_mnemonic(strength=256, language='english'):
     """
     Generate a new BIP39 mnemonic phrase.
     
     Args:
         strength: Entropy strength in bits (128, 160, 192, 224, 256)
-        language: BIP39 language (default: 'english')
+        language: BIP39 language (default: 'english', use get_supported_languages() for list)
         
     Returns:
         str: Generated mnemonic phrase
+        
+    Raises:
+        ValueError: If language is not supported
     """
     from mnemonic import Mnemonic
+    
+    supported = get_supported_languages()
+    if language not in supported:
+        raise ValueError(
+            f"Language '{language}' not supported. "
+            f"Supported languages: {', '.join(sorted(supported))}"
+        )
     
     mnemo = Mnemonic(language)
     words = mnemo.generate(strength=strength)

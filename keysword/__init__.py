@@ -32,7 +32,13 @@ from keysword.core.kdf import derive_key
 
 # Import file I/O functions
 from keysword.io.writers import jsoned as save_keys_json, separated as save_keys_separated
-from keysword.io.readers import read_password_from_file, read_password_with_confirmation
+from keysword.io.readers import (
+    read_password_from_file,
+    read_password_with_confirmation,
+    read_mnemonic,
+    generate_mnemonic,
+    get_supported_languages,
+)
 
 __all__ = [
     # Version info
@@ -53,5 +59,8 @@ __all__ = [
     "save_keys_separated",
     "read_password_from_file",
     "read_password_with_confirmation",
+    "read_mnemonic",
+    "generate_mnemonic",
+    "get_supported_languages",
 ]
 
