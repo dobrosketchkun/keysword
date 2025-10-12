@@ -3,3 +3,4 @@ argon2-cffi
 pycryptodome
 PyNaCl
 bitcoin
+mnemonic

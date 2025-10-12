@@ -4,7 +4,48 @@ import hashlib
 import argon2
 
 
-def derive_key(password, iterations=1, time_cost=3, memory_cost=102400, parallelism=8):
+# Argon2 presets for different security/performance tradeoffs
+ARGON2_PRESETS = {
+    'fast': {
+        'time_cost': 1,
+        'memory_cost': 32768,  # 32 MB
+        'parallelism': 4,
+        'description': 'Fast generation, lower security'
+    },
+    'balanced': {
+        'time_cost': 3,
+        'memory_cost': 102400,  # 100 MB
+        'parallelism': 8,
+        'description': 'Balanced security and performance (default)'
+    },
+    'paranoid': {
+        'time_cost': 10,
+        'memory_cost': 1048576,  # 1 GB
+        'parallelism': 8,
+        'description': 'Maximum security, slow generation'
+    }
+}
+
+
+def get_argon2_preset(preset_name):
+    """
+    Get Argon2 parameters for a given preset.
+    
+    Args:
+        preset_name: Name of preset ('fast', 'balanced', 'paranoid')
+        
+    Returns:
+        dict: Parameters for Argon2
+        
+    Raises:
+        ValueError: If preset name is invalid
+    """
+    if preset_name not in ARGON2_PRESETS:
+        raise ValueError(f"Invalid preset: {preset_name}. Choose from: {', '.join(ARGON2_PRESETS.keys())}")
+    return ARGON2_PRESETS[preset_name].copy()
+
+
+def derive_key(password, iterations=1, time_cost=3, memory_cost=102400, parallelism=8, preset=None):
     """
     Derive a key from the password using Argon2.
     
@@ -14,10 +55,18 @@ def derive_key(password, iterations=1, time_cost=3, memory_cost=102400, parallel
         time_cost: Argon2 time parameter (default: 3)
         memory_cost: Argon2 memory in KiB (default: 102400 = ~100MB)
         parallelism: Number of parallel threads (default: 8)
+        preset: Use a preset ('fast', 'balanced', 'paranoid'). Overrides other params if set.
     
     Returns:
         bytes: 32-byte derived key
     """
+    # Apply preset if specified
+    if preset:
+        preset_params = get_argon2_preset(preset)
+        time_cost = preset_params['time_cost']
+        memory_cost = preset_params['memory_cost']
+        parallelism = preset_params['parallelism']
+    
     # Since we can't use an external salt, we'll derive a salt from the password.
     # This is not ideal, but necessary given the constraints.
     if isinstance(password, str):

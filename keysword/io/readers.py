@@ -39,3 +39,50 @@ def read_password_from_file(filepath):
     except Exception as e:
         raise Exception(f'Error reading password file: {e}')
 
+
+def read_mnemonic(language='english'):
+    """
+    Read and validate BIP39 mnemonic phrase from user.
+    
+    Args:
+        language: BIP39 language (default: 'english')
+        
+    Returns:
+        bytes: 512-bit seed derived from mnemonic
+        
+    Raises:
+        ValueError: If mnemonic is invalid
+    """
+    from mnemonic import Mnemonic
+    
+    mnemo = Mnemonic(language)
+    
+    print("Enter your BIP39 mnemonic phrase (12, 15, 18, 21, or 24 words):")
+    phrase = input().strip()
+    
+    if not mnemo.check(phrase):
+        raise ValueError("Invalid mnemonic phrase. Please check your words and try again.")
+    
+    # Convert mnemonic to seed (512 bits / 64 bytes)
+    # Using empty passphrase by default
+    seed = mnemo.to_seed(phrase, passphrase="")
+    return seed
+
+
+def generate_mnemonic(strength=256, language='english'):
+    """
+    Generate a new BIP39 mnemonic phrase.
+    
+    Args:
+        strength: Entropy strength in bits (128, 160, 192, 224, 256)
+        language: BIP39 language (default: 'english')
+        
+    Returns:
+        str: Generated mnemonic phrase
+    """
+    from mnemonic import Mnemonic
+    
+    mnemo = Mnemonic(language)
+    words = mnemo.generate(strength=strength)
+    return words
+

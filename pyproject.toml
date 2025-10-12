@@ -35,6 +35,7 @@ dependencies = [
     "pycryptodome",
     "PyNaCl",
     "bitcoin",
+    "mnemonic",
 ]
 
 [project.optional-dependencies]

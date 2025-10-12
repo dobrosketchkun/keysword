@@ -6,6 +6,7 @@ from Crypto.Math.Numbers import Integer
 from Crypto.Hash import SHA256
 from Crypto.Protocol.KDF import PBKDF2
 from nacl.public import PrivateKey
+from nacl.signing import SigningKey
 
 from keysword.core.crypto_utils import DeterministicRandom
 
@@ -152,13 +153,116 @@ def make_bitcoin_keys_branched(password, key_amount=1, branches=[410]):
     return list(enumerate(keys, start=1))
 
 
+def make_ed25519_keys_branched(password, key_amount=1, branches=[410]):
+    """
+    Generate multiple Ed25519 signing key pairs deterministically from a password.
+    
+    Args:
+        password: Password string or bytes
+        key_amount: Number of keys to generate
+        branches: List of branch values for key derivation
+    
+    Returns:
+        list: Enumerated list of (index, SigningKey) tuples starting from 1
+    """
+    keys = []
+    count = 200000
+    if isinstance(password, str):
+        password_bytes = password.encode()
+    else:
+        password_bytes = password
+    with progressbar.ProgressBar(max_value=key_amount) as bar_small:
+        for index in range(key_amount):
+            bar_small.update(index + 1)
+            branch = str(branches[index % len(branches)])
+            if isinstance(branch, str):
+                branch_bytes = branch.encode()
+            else:
+                branch_bytes = branch
+            salt = password_bytes + branch_bytes
+            seed = PBKDF2(password_bytes, salt=salt, dkLen=32, count=count, hmac_hash_module=SHA256)
+            keys.append(SigningKey(seed))
+            password_bytes = seed
+    return list(enumerate(keys, start=1))
+
+
+def make_secp256k1_keys_branched(password, key_amount=1, branches=[410]):
+    """
+    Generate multiple secp256k1 key pairs deterministically from a password.
+    This is the curve used by Bitcoin and Ethereum.
+    
+    Args:
+        password: Password string or bytes
+        key_amount: Number of keys to generate
+        branches: List of branch values for key derivation
+    
+    Returns:
+        list: Enumerated list of (index, ECC.EccKey) tuples starting from 1
+    """
+    keys = []
+    count = 200000
+    if isinstance(password, str):
+        password_bytes = password.encode()
+    else:
+        password_bytes = password
+    with progressbar.ProgressBar(max_value=key_amount) as bar_small:
+        for index in range(key_amount):
+            bar_small.update(index + 1)
+            branch = str(branches[index % len(branches)])
+            if isinstance(branch, str):
+                branch_bytes = branch.encode()
+            else:
+                branch_bytes = branch
+            salt = password_bytes + branch_bytes
+            seed = PBKDF2(password_bytes, salt=salt, dkLen=32, count=count, hmac_hash_module=SHA256)
+            int_seed = Integer.from_bytes(seed) % ECC._curves['secp256k1'].order
+            keys.append(ECC.construct(curve='secp256k1', d=int_seed))
+            password_bytes = seed
+    return list(enumerate(keys, start=1))
+
+
+def make_ethereum_keys_branched(password, key_amount=1, branches=[410]):
+    """
+    Generate multiple Ethereum addresses deterministically from a password.
+    Uses secp256k1 curve and derives Ethereum addresses from public keys.
+    
+    Args:
+        password: Password string or bytes
+        key_amount: Number of keys to generate
+        branches: List of branch values for key derivation
+    
+    Returns:
+        list: Enumerated list of (index, dict) tuples with 'key' and 'address'
+    """
+    from Crypto.Hash import keccak
+    
+    secp_keys = make_secp256k1_keys_branched(password, key_amount, branches)
+    eth_keys = []
+    
+    for idx, key in secp_keys:
+        # Get uncompressed public key (65 bytes: 0x04 + x + y)
+        pub_key_point = key.public_key().pointQ
+        x = pub_key_point.x.to_bytes(32, 'big')
+        y = pub_key_point.y.to_bytes(32, 'big')
+        uncompressed_pub = x + y  # Skip the 0x04 prefix for hashing
+        
+        # Ethereum address is last 20 bytes of keccak256(public_key)
+        k = keccak.new(digest_bits=256)
+        k.update(uncompressed_pub)
+        address = '0x' + k.hexdigest()[-40:]
+        
+        eth_keys.append((idx, {'key': key, 'address': address}))
+    
+    return eth_keys
+
+
 def make_me_keys(password, key_type, key_amount=1, size_rsa=2048, branches=[410]):
     """
     Generate key pairs for the specified key type deterministically from a password.
     
     Args:
         password: Password string or bytes
-        key_type: Type of key ('P-256', 'curve25519', 'RSA', 'bitcoin')
+        key_type: Type of key ('P-256', 'curve25519', 'RSA', 'bitcoin', 'ed25519', 'secp256k1', 'ethereum')
         key_amount: Number of keys to generate
         size_rsa: RSA key size in bits (default: 2048)
         branches: List of branch values for key derivation
@@ -177,6 +281,12 @@ def make_me_keys(password, key_type, key_amount=1, size_rsa=2048, branches=[410]
         return make_rsa_keys_branched(password=password, size=size_rsa, key_amount=key_amount, branches=branches)
     elif key_type == 'bitcoin':
         return make_bitcoin_keys_branched(password=password, key_amount=key_amount, branches=branches)
+    elif key_type == 'ed25519':
+        return make_ed25519_keys_branched(password=password, key_amount=key_amount, branches=branches)
+    elif key_type == 'secp256k1':
+        return make_secp256k1_keys_branched(password=password, key_amount=key_amount, branches=branches)
+    elif key_type == 'ethereum':
+        return make_ethereum_keys_branched(password=password, key_amount=key_amount, branches=branches)
     else:
-        raise ValueError('Only P-256, curve25519, RSA, or bitcoin types are allowed.')
+        raise ValueError(f'Unsupported key type: {key_type}. Supported types: P-256, curve25519, RSA, bitcoin, ed25519, secp256k1, ethereum')
 
