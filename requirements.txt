@@ -5,6 +5,8 @@ pycryptodome
 PyNaCl
 bitcoin
 mnemonic
+rich>=13.0.0
+questionary>=2.0.0
 
 # Development dependencies (testing)
 pytest>=7.0.0

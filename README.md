@@ -2,7 +2,7 @@
 
 ## Description
 
-Keysword is a Python script that generates cryptographic key pairs (Curve25519, P-256, RSA, or Bitcoin keys) deterministically from a user-provided password or raw file data. By utilizing a branching mechanism and key indexing, it creates multiple keys to enhance security against attacks like rainbow tables.
+Keysword is a comprehensive cryptographic key generation tool that generates key pairs deterministically from passwords, mnemonic phrases, or file data. Supports 7 key types (Curve25519, P-256, RSA, Bitcoin, Ed25519, secp256k1, Ethereum) with branching mechanism, optional encryption, and both CLI and interactive TUI modes.
 
 ---
 
@@ -20,11 +20,19 @@ Keysword is a Python script that generates cryptographic key pairs (Curve25519, 
 
 ## Features
 
-- Generate key pairs deterministically from a strong password or any file.
-- Supports Curve25519, P-256, RSA, and Bitcoin keys.
-- Implements a branching mechanism to enhance security.
-- Keys can be saved in JSON format or as separate files.
-- **Note:** Private keys are saved unencrypted. Ensure they are stored securely.
+- **7 Key Types:** RSA, P-256, Curve25519, Ed25519, Bitcoin, secp256k1, Ethereum
+- **Interactive TUI Mode:** Beautiful wizard with step-by-step guidance
+- **CLI Mode:** Full command-line interface for advanced users
+- **Deterministic Generation:** Same password + branches = same keys
+- **Branching Security:** Hierarchical key derivation (BIP-0032-like)
+- **BIP39 Mnemonic Support:** Generate and use mnemonic phrases
+- **Encryption:** AES-256-GCM encryption for output files
+- **Multiple Formats:** JSON or separated files
+- **Export Formats:** PEM, DER, OpenSSH, Hex, Base64, WIF
+- **Parallel Processing:** Fast multi-key generation
+- **Password Validation:** Strength checking with warnings
+- **Key Verification:** Validate generated keys
+- **Argon2 KDF:** Configurable presets (Fast, Balanced, Paranoid)
 
 ## Requirements
 
@@ -41,6 +49,26 @@ pip install -r requirements.txt
 
 ## Usage
 
+### Interactive Mode (Default)
+
+Simply run Keysword without arguments to launch the beautiful TUI wizard:
+
+```bash
+python keysword.py
+```
+
+This provides a guided experience with step-by-step prompts (recommended for most users).
+
+The interactive mode provides:
+- 🎨 Beautiful terminal UI with rich formatting
+- 🧙 Step-by-step guided wizard
+- ✨ Real-time validation and helpful hints
+- 🔐 Secure password input with confirmation
+- 📊 Configuration summary before generation
+- 🎲 Random branch generation option
+
+### Command-Line Mode (Advanced)
+
 Run the script using Python and provide the necessary arguments:
 
 ```bash
@@ -49,38 +77,74 @@ python keysword.py -k KEY_TYPE -b BRANCHES -n NUMBER [options]
 
 ### Arguments
 
-- `-k`, `--key-type`: **Required.** Type of key to generate. Options: `curve25519`, `P-256`, `RSA`, `bitcoin`.
-- `-b`, `--branches`: **Required.** Branching policy as a list in the format `'[number1,number2,...]'`.
-- `-n`, `--number`: **Required.** Key pair number to use from the generated branched tree.
-- `-r`, `--rsa-size`: RSA key size (default: `2048`).
-- `-a`, `--key-amount`: Number of keys to generate (default: `1`).
-- `-f`, `--save-type`: Save format. Options: `json` (default), `separated`.
-- `-pfile`, `--password-file`: Path to a file. Use the raw file data as the password input.
+#### Required (for CLI mode):
+- `-k`, `--key-type`: Type of key - `curve25519`, `P-256`, `RSA`, `bitcoin`, `ed25519`, `secp256k1`, `ethereum`
+- `-b`, `--branches`: Branching policy - `'[number1,number2,...]'`
+- `-n`, `--number`: Key pair number from the branched tree
+
+#### Optional:
+- `-i`, `--interactive`: Launch interactive TUI mode (no other args needed)
+- `-r`, `--rsa-size`: RSA key size in bits (default: `2048`)
+- `-a`, `--key-amount`: Number of keys to generate (default: `1`)
+- `-f`, `--save-type`: Save format - `json` or `separated` (default: `json`)
+- `-pfile`, `--password-file`: Use file data as password
+- `--encrypt`: Encrypt output files with AES-256-GCM
+- `--mnemonic`: Use BIP39 mnemonic phrase as password
+- `--generate-mnemonic`: Generate a new BIP39 mnemonic and exit
+- `--verify`: Verify keys without saving
+- `--export-format`: Export format - `default`, `all`, `pem`, `der`, `openssh`, `hex`, `base64`
+- `--parallel`: Use parallel processing for multiple keys
+- `--workers`: Number of parallel workers
+- `--preset`: Argon2 preset - `fast`, `balanced`, `paranoid`
+- `--no-warnings`: Suppress validation warnings
 
 ### Examples
 
-Generate a Curve25519 key:
-
+#### Interactive Mode (Default)
 ```bash
-python keysword.py -k curve25519 -b '[1,4333,45453,64,99,3245]' -n 77
+python keysword.py
 ```
 
-Generate RSA keys with a 1024-bit key size and use a file for password input:
-
+#### Basic Key Generation
 ```bash
-python keysword.py -k RSA -r 1024 -b '[410,111,123]' -n 12 -pfile /path/to/password_file
+# Curve25519 key
+python keysword.py -k curve25519 -b '[1,4333,45453]' -n 77
+
+# RSA 4096-bit key
+python keysword.py -k RSA -r 4096 -b '[410,111,123]' -n 1
+
+# Ethereum address
+python keysword.py -k ethereum -b '[999,888,777]' -n 1
 ```
 
-Generate multiple P-256 keys with branching and save private/public keys in separate text files:
-
+#### Advanced Usage
 ```bash
-python keysword.py -k P-256 -b '[1,4100,4773,199,7445]' -n 168 -a 1000 -f separated
+# Generate with encryption
+python keysword.py -k P-256 -b '[1,2,3]' -n 1 --encrypt
+
+# Use BIP39 mnemonic
+python keysword.py -k bitcoin -b '[410]' -n 1 --mnemonic
+
+# Generate from file with separated output
+python keysword.py -k ed25519 -b '[111]' -n 1 -pfile myfile.bin -f separated
+
+# Parallel generation of 100 Bitcoin keys
+python keysword.py -k bitcoin -b '[410]' -n 1 -a 100 --parallel --workers 8
+
+# Paranoid security settings
+python keysword.py -k RSA -r 4096 -b '[9999,8888,7777]' -n 1 --preset paranoid --encrypt
 ```
 
-Generate Bitcoin keys using a file as the password:
-
+#### Utility Commands
 ```bash
-python keysword.py -k bitcoin -b '[111]' -n 77 -a 10 -pfile /path/to/datafile
+# Generate a BIP39 mnemonic phrase
+python keysword.py --generate-mnemonic
+
+# Decrypt an encrypted file
+python keysword.py --decrypt-file mykeys.json.enc
+
+# Verify keys without saving
+python keysword.py -k RSA -b '[1,2,3]' -n 1 --verify
 ```
 
 ## How It Works
@@ -92,19 +156,16 @@ The **Keysword** script generates cryptographic key pairs deterministically from
 - You can provide a password by typing it, or you can use any file's raw data as the password by specifying `-pfile`.
 - If a file is used, the script reads the file in binary mode and uses the raw data as the password.
 
-### 2. Key Derivation (`sha000` Function)
+### 2. Key Derivation
 
-- **Purpose:** To derive a secure key from the user's password or file data.
-- **Method:**
-  - Uses the **Argon2** key derivation function (KDF) from the `argon2` library.
-  - **Parameters:**
-    - `iterations`: Number of times the Argon2 function is applied (default is 1).
-    - `time_cost`, `memory_cost`, `parallelism`: Parameters defining the computational expense of the function.
-  - **Salt Generation:**
-    - A salt is derived from the password or file data using SHA-256 hashing (`hashlib.sha256(password.encode() or password).digest()`).
-    - The determinism of this salt helps maintain repeatable key generation.
-- **Output:**
-  - The function returns the derived key as raw bytes (32 bytes).
+- **Argon2 KDF:** Memory-hard key derivation function
+- **Presets:**
+  - **Fast:** Quick generation for testing
+  - **Balanced:** Good security/speed trade-off (default)
+  - **Paranoid:** Maximum security, slower
+  - **Custom:** Manual time_cost, memory_cost, parallelism
+- **Salt:** Deterministically derived from password for reproducibility
+- **Output:** 32-byte derived key
 
 ### 3. Branching Mechanism
 
@@ -116,74 +177,63 @@ The **Keysword** script generates cryptographic key pairs deterministically from
 
 ### 4. Key Generation Functions
 
-- **General Approach:**
-  - For each key type, a specific function generates keys deterministically using PBKDF2.
-  - A fixed iteration count (`count = 200000`) ensures consistent security.
+All keys are generated deterministically using PBKDF2 with branch-specific salts.
 
-- **Key Types:**
-
-  #### a. Curve25519 Keys (`make_curve25519_keys_pbkdf2_branched`)
-
-  - **Process:**
-    - Uses PBKDF2 with the derived password and branch-specific salt.
-    - Generates a 32-byte key material used to create a Curve25519 private key.
-    - Derives the public key from the private key.
-
-  #### b. P-256 Keys (`make_p256_keys_pbkdf2_branched`)
-
-  - **Process:**
-    - Similar to Curve25519 key generation.
-    - Constructs an ECC key using the derived seed modulo the curve order.
-
-  #### c. RSA Keys (`make_rsa_keys_branched`)
-
-  - **Process:**
-    - Uses PBKDF2 to derive a seed for key generation.
-    - The seed initializes a deterministic random number generator for RSA key creation.
-    - Generates RSA key pairs with the specified key size.
-
-  #### d. Bitcoin Keys (`make_bitcoin_keys_pbkdf2_branched`)
-
-  - **Process:**
-    - Generates a private key using PBKDF2.
-    - Converts the private key to a Wallet Import Format (WIF) using `encode_privkey`.
-    - Derives the corresponding Bitcoin address using `privkey_to_address`.
+- **RSA:** Traditional public-key crypto (1024-4096 bits)
+- **P-256:** NIST elliptic curve
+- **Curve25519:** Modern X25519 encryption
+- **Ed25519:** Fast digital signatures
+- **Bitcoin:** BTC private keys, WIF, addresses (P2PKH)
+- **secp256k1:** Bitcoin/Ethereum curve
+- **Ethereum:** ETH addresses with checksums
 
 ### 5. Key Storage Options
 
 - **Formats:**
-  - **JSON Format:**
-    - All keys are saved in a single JSON file.
-    - Useful for organizing and accessing multiple keys.
-  - **Separated Files:**
-    - Private and public keys are saved in separate text files.
-    - Each private key is saved with a `_secret_` suffix in the filename.
-    - Each public key (or Bitcoin address) is saved with a `_public_` (or `_address_`) suffix in the filename.
-- **Note:**
-  - Private keys are saved **unencrypted**.
-  - Users must ensure these files are stored securely.
+  - **JSON:** All keys in one file
+  - **Separated:** Private (`_secret_`) and public (`_public_` or `_address_`) in separate files
+  
+- **Encryption:**
+  - Optional AES-256-GCM encryption with `--encrypt`
+  - Separate encryption password
+  - Scrypt KDF for encryption key derivation
+  
+- **Export Formats:**
+  - PEM, DER, OpenSSH (RSA, P-256)
+  - Hex, Base64 (Curve25519, Ed25519)
+  - WIF, addresses (Bitcoin, Ethereum)
 
 ## Security Considerations
 
-- **Deterministic Generation:**
-  - Keys are generated deterministically from the password (or file data) and branch values.
-  - If someone knows your password or file and branching strategy, they can regenerate your keys.
-- **Password Strength:**
-  - Use a strong, unique password (or large, random file) to prevent brute-force or dictionary attacks.
-  - Longer passwords or high-entropy files increase security.
-- **Input Validation:**
-  - The script uses `ast.literal_eval()` for safe parsing of branch lists, preventing code injection attacks.
-- **No External Salt:**
-  - The script derives salts from the password or file data to maintain determinism.
-  - Be aware that this is less secure than using random, unique salts.
-- **Private Key Safety:**
-  - Private keys are saved in plaintext.
-  - Immediately move them to a secure location and consider encrypting them.
-- **Usage Warning:**
-  - This script is intended for users who understand the security implications.
-  - Not recommended for production environments without further security measures.
-- **Disclaimer:**
-  - This script is for experimental purposes. Use at your own risk.
+### Strengths
+- ✅ Argon2 KDF (memory-hard, resistant to GPUs/ASICs)
+- ✅ AES-256-GCM authenticated encryption
+- ✅ Secure input validation (`ast.literal_eval`)
+- ✅ Password strength checking
+- ✅ Key verification system
+- ✅ Branching adds additional security layer
+
+### Important Warnings
+- ⚠️ **Deterministic:** Same password + branches = same keys
+- ⚠️ **Password Security:** Use 16+ character passwords with mixed case, numbers, symbols
+- ⚠️ **Branch Privacy:** Keep branch configuration secret
+- ⚠️ **Encryption:** Always use `--encrypt` for production
+- ⚠️ **No Recovery:** Lost passwords cannot be recovered
+- ⚠️ **File Permissions:** Secure your output files (chmod 600)
+- ⚠️ **Backup:** Store passwords and configurations separately
+
+### Best Practices
+1. Use BIP39 mnemonic phrases for easier backup
+2. Use Paranoid preset for long-term keys
+3. Use random branches (3-6 large numbers)
+4. Always encrypt output files
+5. Store encryption password separately
+6. Back up to offline/cold storage
+7. Test key regeneration before deleting originals
+8. Never commit keys to version control
+
+### Disclaimer
+This tool is for users who understand cryptographic key management. Use at your own risk. Not audited for production use.
 
 ## Converting PEM to OpenPGP Format
 
@@ -258,6 +308,87 @@ This should show your newly imported OpenPGP key.
 
 By converting your RSA keys to OpenPGP format, you can use them in a wider variety of applications while still benefiting from the original key generation performed by the Keysword script.
 
+## Library Usage
+
+Keysword can be used as a Python library:
+
+```python
+from keysword import generate_rsa_keys, generate_ethereum_keys
+
+# Generate RSA keys
+rsa_keys = generate_rsa_keys(
+    password=b"my_strong_password",
+    branches=[410, 111, 123],
+    key_number=1,
+    key_amount=5,
+    size=2048
+)
+
+# Generate Ethereum address
+eth_keys = generate_ethereum_keys(
+    password=b"my_strong_password",
+    branches=[999, 888, 777],
+    key_number=1,
+    key_amount=1
+)
+```
+
+See `keysword/__init__.py` for full API documentation.
+
+## Testing
+
+Run the test suite:
+
+```bash
+# Install test dependencies
+pip install -r requirements.txt
+
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=keysword --cov-report=html
+
+# Run specific test file
+pytest tests/test_generators.py -v
+```
+
+## Package Installation
+
+Install as a package:
+
+```bash
+# Development install
+pip install -e .
+
+# Then use as command
+keysword -i
+```
+
+## Project Structure
+
+```
+keysword/
+├── keysword/           # Main package
+│   ├── core/          # Key generation, KDF, crypto
+│   ├── io/            # File I/O, encryption
+│   ├── validation/    # Input/key validation
+│   ├── ui/            # CLI and interactive TUI
+│   └── utils/         # Helper functions
+├── tests/             # Test suite (125 tests)
+├── keysword.py        # Direct usage entry point
+├── pyproject.toml     # Package configuration
+└── requirements.txt   # Dependencies
+```
+
+## Contributing
+
+Issues and pull requests welcome. Please ensure tests pass before submitting.
+
+## License
+
+Use at your own risk. See LICENSE file for details.
+
 ## Conclusion
 
-The **Keysword** script allows users to generate cryptographic key pairs solely from a password or any file, using deterministic methods enhanced by a branching mechanism. This can be useful in scenarios where users need to recreate keys without storing them but comes with significant security considerations that must be carefully managed.
+Keysword provides deterministic cryptographic key generation with branching security, encryption, and both CLI and interactive interfaces. Suitable for users who need reproducible keys from memorable passwords or mnemonic phrases, with proper security understanding.
