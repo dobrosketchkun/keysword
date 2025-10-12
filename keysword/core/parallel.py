@@ -100,15 +100,22 @@ def should_use_parallel(key_amount: int, key_type: str) -> bool:
     Returns:
         bool: True if parallel processing is beneficial
     """
-    # Parallel is beneficial for multiple keys, especially RSA
+    # Parallel processing has limitations on Windows with certain key types
+    # RSA, P-256, and secp256k1 keys cannot be pickled for multiprocessing
+    # Only use parallel for key types that return simple types (hex strings)
+    
     if key_amount < 2:
         return False
     
-    # RSA benefits greatly from parallelization even with few keys
-    if key_type == 'RSA' and key_amount >= 2:
-        return True
+    # Only allow parallel for key types that can be pickled (return strings/bytes)
+    # These work: bitcoin, ethereum (returns dict with strings), curve25519, ed25519
+    # These DON'T work: RSA, P-256, secp256k1 (return unpicklable objects)
+    picklable_types = ['bitcoin', 'ethereum', 'curve25519', 'ed25519']
     
-    # Other key types benefit with more keys
+    if key_type not in picklable_types:
+        return False
+    
+    # For picklable types, use parallel with 4+ keys
     if key_amount >= 4:
         return True
     

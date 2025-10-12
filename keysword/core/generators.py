@@ -191,34 +191,18 @@ def make_secp256k1_keys_branched(password, key_amount=1, branches=[410]):
     Generate multiple secp256k1 key pairs deterministically from a password.
     This is the curve used by Bitcoin and Ethereum.
     
+    Note: pycryptodome doesn't support secp256k1, so we use the bitcoin library instead.
+    
     Args:
         password: Password string or bytes
         key_amount: Number of keys to generate
         branches: List of branch values for key derivation
     
     Returns:
-        list: Enumerated list of (index, ECC.EccKey) tuples starting from 1
+        list: Enumerated list of (index, hex_string) tuples starting from 1
     """
-    keys = []
-    count = 200000
-    if isinstance(password, str):
-        password_bytes = password.encode()
-    else:
-        password_bytes = password
-    with progressbar.ProgressBar(max_value=key_amount) as bar_small:
-        for index in range(key_amount):
-            bar_small.update(index + 1)
-            branch = str(branches[index % len(branches)])
-            if isinstance(branch, str):
-                branch_bytes = branch.encode()
-            else:
-                branch_bytes = branch
-            salt = password_bytes + branch_bytes
-            seed = PBKDF2(password_bytes, salt=salt, dkLen=32, count=count, hmac_hash_module=SHA256)
-            int_seed = Integer.from_bytes(seed) % ECC._curves['secp256k1'].order
-            keys.append(ECC.construct(curve='secp256k1', d=int_seed))
-            password_bytes = seed
-    return list(enumerate(keys, start=1))
+    # secp256k1 is not in pycryptodome, use bitcoin library approach
+    return make_bitcoin_keys_branched(password, key_amount, branches)
 
 
 def make_ethereum_keys_branched(password, key_amount=1, branches=[410]):
@@ -232,26 +216,33 @@ def make_ethereum_keys_branched(password, key_amount=1, branches=[410]):
         branches: List of branch values for key derivation
     
     Returns:
-        list: Enumerated list of (index, dict) tuples with 'key' and 'address'
+        list: Enumerated list of (index, dict) tuples with 'key' (hex) and 'address'
     """
     from Crypto.Hash import keccak
+    from bitcoin import privkey_to_pubkey
     
+    # Get secp256k1 private keys (as hex strings)
     secp_keys = make_secp256k1_keys_branched(password, key_amount, branches)
     eth_keys = []
     
-    for idx, key in secp_keys:
-        # Get uncompressed public key (65 bytes: 0x04 + x + y)
-        pub_key_point = key.public_key().pointQ
-        x = pub_key_point.x.to_bytes(32, 'big')
-        y = pub_key_point.y.to_bytes(32, 'big')
-        uncompressed_pub = x + y  # Skip the 0x04 prefix for hashing
+    for idx, key_hex in secp_keys:
+        # Get uncompressed public key from bitcoin library
+        # privkey_to_pubkey returns bytes
+        pubkey = privkey_to_pubkey(bytes.fromhex(key_hex))
+        # Convert to hex if it's bytes, otherwise it's already hex
+        if isinstance(pubkey, bytes):
+            pubkey_hex = pubkey.hex()
+        else:
+            pubkey_hex = pubkey
+        # Remove '04' prefix
+        pubkey_bytes = bytes.fromhex(pubkey_hex[2:])
         
         # Ethereum address is last 20 bytes of keccak256(public_key)
         k = keccak.new(digest_bits=256)
-        k.update(uncompressed_pub)
+        k.update(pubkey_bytes)
         address = '0x' + k.hexdigest()[-40:]
         
-        eth_keys.append((idx, {'key': key, 'address': address}))
+        eth_keys.append((idx, {'key': key_hex, 'address': address}))
     
     return eth_keys
 

@@ -270,6 +270,15 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
     from keysword.core.parallel import should_use_parallel, generate_keys_parallel
     use_parallel = args.parallel or should_use_parallel(key_amount, key_type)
     
+    # Check if key type supports parallel processing (Windows limitation)
+    unpicklable_types = ['RSA', 'P-256', 'secp256k1']
+    if use_parallel and key_type in unpicklable_types:
+        if not args.no_warnings:
+            print(f"⚠ Warning: Parallel processing not supported for {key_type} keys on Windows.")
+            print(f"  Reason: These key objects cannot be pickled for multiprocessing.")
+            print(f"  Falling back to sequential generation...\n")
+        use_parallel = False
+    
     if use_parallel and key_amount > 1:
         # Use parallel processing
         num_workers = args.workers if args.workers else None
@@ -379,29 +388,37 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
                     decoded_keys_temp_list.append({'secret': sec, 'public': pub})
             elif key_type == 'P-256' or key_type == 'secp256k1':
                 if args.export_format in ['pem', 'default']:
-                    sec = the_key.export_key(format='PEM').decode()
-                    pub = the_key.public_key().export_key(format='PEM').decode()
+                    sec_bytes = the_key.export_key(format='PEM')
+                    pub_bytes = the_key.public_key().export_key(format='PEM')
+                    sec = sec_bytes.decode() if isinstance(sec_bytes, bytes) else sec_bytes
+                    pub = pub_bytes.decode() if isinstance(pub_bytes, bytes) else pub_bytes
                     decoded_keys_temp_list.append({'secret': sec, 'public': pub})
                 elif args.export_format == 'der':
                     sec = the_key.export_key(format='DER').hex()
                     pub = the_key.public_key().export_key(format='DER').hex()
                     decoded_keys_temp_list.append({'secret': sec, 'public': pub})
                 elif args.export_format == 'openssh':
-                    sec = the_key.export_key(format='PEM').decode()
-                    pub = the_key.public_key().export_key(format='OpenSSH').decode()
+                    sec_bytes = the_key.export_key(format='PEM')
+                    pub_bytes = the_key.public_key().export_key(format='OpenSSH')
+                    sec = sec_bytes.decode() if isinstance(sec_bytes, bytes) else sec_bytes
+                    pub = pub_bytes.decode() if isinstance(pub_bytes, bytes) else pub_bytes
                     decoded_keys_temp_list.append({'secret': sec, 'public': pub})
             elif key_type == 'RSA':
                 if args.export_format in ['pem', 'default']:
-                    sec = the_key.export_key().decode()
-                    pub = the_key.publickey().export_key().decode()
+                    sec_bytes = the_key.export_key()
+                    pub_bytes = the_key.publickey().export_key()
+                    sec = sec_bytes.decode() if isinstance(sec_bytes, bytes) else sec_bytes
+                    pub = pub_bytes.decode() if isinstance(pub_bytes, bytes) else pub_bytes
                     decoded_keys_temp_list.append({'secret': sec, 'public': pub})
                 elif args.export_format == 'der':
                     sec = the_key.export_key(format='DER').hex()
                     pub = the_key.publickey().export_key(format='DER').hex()
                     decoded_keys_temp_list.append({'secret': sec, 'public': pub})
                 elif args.export_format == 'openssh':
-                    sec = the_key.export_key().decode()
-                    pub = the_key.publickey().export_key(format='OpenSSH').decode()
+                    sec_bytes = the_key.export_key()
+                    pub_bytes = the_key.publickey().export_key(format='OpenSSH')
+                    sec = sec_bytes.decode() if isinstance(sec_bytes, bytes) else sec_bytes
+                    pub = pub_bytes.decode() if isinstance(pub_bytes, bytes) else pub_bytes
                     decoded_keys_temp_list.append({'secret': sec, 'public': pub})
             elif key_type == 'bitcoin':
                 # the_key is a hex string (64 chars = 32 bytes)
@@ -419,8 +436,8 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
                     pub = Base64Encoder.encode(the_key.verify_key.__bytes__()).decode()
                     decoded_keys_temp_list.append({'secret': sec, 'public': pub})
             elif key_type == 'ethereum':
-                # the_key is a dict with 'key' (ECC key) and 'address' (0x...)
-                sec = the_key['key'].export_key(format='PEM').decode()
+                # the_key is a dict with 'key' (hex string) and 'address' (0x...)
+                sec = the_key['key']  # Already a hex string
                 addr = the_key['address']
                 decoded_keys_temp_list.append({'secret': sec, 'address': addr})
 

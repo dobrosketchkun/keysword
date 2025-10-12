@@ -38,9 +38,12 @@ class KeyFormatter:
         Returns:
             dict: Key in different formats
         """
+        pem = key.export_key(format='PEM')
+        pem_pub = key.public_key().export_key(format='PEM')
+        
         formats = {
-            'pem': key.export_key(format='PEM').decode(),
-            'pem_public': key.public_key().export_key(format='PEM').decode(),
+            'pem': pem.decode() if isinstance(pem, bytes) else pem,
+            'pem_public': pem_pub.decode() if isinstance(pem_pub, bytes) else pem_pub,
             'der': key.export_key(format='DER').hex(),
             'der_public': key.public_key().export_key(format='DER').hex(),
         }
