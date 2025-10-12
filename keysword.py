@@ -8,6 +8,7 @@ import time
 import sys
 import os
 import platform
+import ast
 import argon2
 import progressbar
 
@@ -67,16 +68,27 @@ def jsoned(decoded_keys_temp_list, key_type):
 
 def separated(decoded_keys_temp_list, key_type):
     '''
-    Save keys in separate text files.
+    Save keys in separate text files (private and public in different files).
     '''
-    for keys in decoded_keys_temp_list:
+    for index, keys in enumerate(decoded_keys_temp_list, start=1):
+        timestamp = int(time.time())
+        rand = random.random()
+        
+        # Save private/secret key
+        secret_filename = f"{timestamp}_{rand}_{key_type}_secret_{index}.txt"
+        with open(secret_filename, 'w') as file:
+            file.write(keys['secret'])
+        
+        # Save public key or address
         try:
-            keys_text = keys['secret'] + '\n' + keys['public']
+            public_filename = f"{timestamp}_{rand}_{key_type}_public_{index}.txt"
+            with open(public_filename, 'w') as file:
+                file.write(keys['public'])
         except KeyError:
-            keys_text = keys['secret'] + '\n' + keys['address']
-        filename = f"{int(time.time())}_{random.random()}_{key_type}.txt"
-        with open(filename, 'w') as file:
-            file.write(keys_text)
+            # For Bitcoin, save address instead
+            address_filename = f"{timestamp}_{rand}_{key_type}_address_{index}.txt"
+            with open(address_filename, 'w') as file:
+                file.write(keys['address'])
 
 def clear_screen():
     '''
@@ -99,7 +111,7 @@ def make_curve25519_keys_pbkdf2_branched(password, key_amount=1, branches=[410])
         password_bytes = password
     with progressbar.ProgressBar(max_value=key_amount) as bar_small:
         for index in range(key_amount):
-            bar_small.update(index)
+            bar_small.update(index + 1)
             branch = str(branches[index % len(branches)])
             if isinstance(branch, str):
                 branch_bytes = branch.encode()
@@ -123,7 +135,7 @@ def make_p256_keys_pbkdf2_branched(password, key_amount=1, branches=[410]):
         password_bytes = password
     with progressbar.ProgressBar(max_value=key_amount) as bar_small:
         for index in range(key_amount):
-            bar_small.update(index)
+            bar_small.update(index + 1)
             branch = str(branches[index % len(branches)])
             if isinstance(branch, str):
                 branch_bytes = branch.encode()
@@ -163,7 +175,7 @@ def make_rsa_keys_branched(password, size=2048, key_amount=1, branches=[410]):
         password_bytes = password
     with progressbar.ProgressBar(max_value=key_amount) as bar_small:
         for index in range(key_amount):
-            bar_small.update(index)
+            bar_small.update(index + 1)
             branch = str(branches[index % len(branches)])
             if isinstance(branch, str):
                 branch_bytes = branch.encode()
@@ -194,7 +206,7 @@ def make_bitcoin_keys_branched(password, key_amount=1, branches=[410]):
         password_bytes = password
     with progressbar.ProgressBar(max_value=key_amount) as bar_small:
         for index in range(key_amount):
-            bar_small.update(index)
+            bar_small.update(index + 1)
             branch = str(branches[index % len(branches)])
             if isinstance(branch, str):
                 branch_bytes = branch.encode()
@@ -254,14 +266,28 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
     parser.add_argument('-b', '--branches', action="store", help='Type a branching policy, in a \'[number1,...,numberX]\' format.', required=True)
     parser.add_argument('-n', '--number', action="store", help='Select the key pair number you want to use in the generated branched tree', required=True)
     parser.add_argument('-a', '--key-amount', action="store", default=1, help='Select a key amount. The larger the number, the longer it will take to generate keys (especially for RSA).')
-    parser.add_argument('-f', '--save-type', action="store", default='json', help='Choose "json" to save all the keys in one file in JSON format or "separated" to save pairs in separate txt files (first - secret, second - public or address in case of Bitcoin).')
+    parser.add_argument('-f', '--save-type', action="store", default='json', help='Choose "json" to save all the keys in one file in JSON format or "separated" to save private and public keys in separate txt files.')
     parser.add_argument('-pfile', '--password-file', action="store", help='Use a file as password input (raw data of the file will be used)')
 
     args = parser.parse_args()
 
     key_type = args.key_type
     rsa_size = int(args.rsa_size)
-    branches = eval(args.branches)
+    
+    # Safely parse branches list - use ast.literal_eval instead of eval for security
+    try:
+        # Strip any surrounding quotes that might be passed from the shell
+        branches_str = args.branches.strip().strip('"').strip("'")
+        branches = ast.literal_eval(branches_str)
+        if not isinstance(branches, list):
+            raise ValueError('Branches must be a list in the format [number1, number2, ...]')
+        if not all(isinstance(b, (int, float)) for b in branches):
+            raise ValueError('All branch values must be numbers')
+        if len(branches) == 0:
+            raise ValueError('Branches list cannot be empty')
+    except (ValueError, SyntaxError) as e:
+        raise ValueError(f'Invalid branches format: {e}. Expected format: [number1, number2, ...]')
+    
     key_number = int(args.number)
     key_amount = int(args.key_amount)
     file_type = args.save_type
@@ -349,6 +375,8 @@ python keysword.py -k curve25519 -b '[111]' -n 77 -a 10 -f separated
             pub = the_key.publickey().export_key().decode()
             decoded_keys_temp_list.append({'secret': sec, 'public': pub})
         elif key_type == 'bitcoin':
+            # the_key is a hex string (64 chars = 32 bytes)
+            # [:64] extracts the first 64 hex characters representing the 32-byte private key
             sec = encode_privkey(the_key[:64], 'wif_compressed')
             addr = privkey_to_address(the_key[:64])
             decoded_keys_temp_list.append({'secret': sec, 'address': addr})

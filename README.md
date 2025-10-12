@@ -71,7 +71,7 @@ Generate RSA keys with a 1024-bit key size and use a file for password input:
 python keysword.py -k RSA -r 1024 -b '[410,111,123]' -n 12 -pfile /path/to/password_file
 ```
 
-Generate multiple P-256 keys with branching and save them in separate text files:
+Generate multiple P-256 keys with branching and save private/public keys in separate text files:
 
 ```bash
 python keysword.py -k P-256 -b '[1,4100,4773,199,7445]' -n 168 -a 1000 -f separated
@@ -104,7 +104,7 @@ The **Keysword** script generates cryptographic key pairs deterministically from
     - A salt is derived from the password or file data using SHA-256 hashing (`hashlib.sha256(password.encode() or password).digest()`).
     - The determinism of this salt helps maintain repeatable key generation.
 - **Output:**
-  - The function returns a hexadecimal representation of the derived key.
+  - The function returns the derived key as raw bytes (32 bytes).
 
 ### 3. Branching Mechanism
 
@@ -156,8 +156,9 @@ The **Keysword** script generates cryptographic key pairs deterministically from
     - All keys are saved in a single JSON file.
     - Useful for organizing and accessing multiple keys.
   - **Separated Files:**
-    - Each key pair is saved in separate text files.
-    - The private key and public key (or address) are stored together.
+    - Private and public keys are saved in separate text files.
+    - Each private key is saved with a `_secret_` suffix in the filename.
+    - Each public key (or Bitcoin address) is saved with a `_public_` (or `_address_`) suffix in the filename.
 - **Note:**
   - Private keys are saved **unencrypted**.
   - Users must ensure these files are stored securely.
@@ -170,6 +171,8 @@ The **Keysword** script generates cryptographic key pairs deterministically from
 - **Password Strength:**
   - Use a strong, unique password (or large, random file) to prevent brute-force or dictionary attacks.
   - Longer passwords or high-entropy files increase security.
+- **Input Validation:**
+  - The script uses `ast.literal_eval()` for safe parsing of branch lists, preventing code injection attacks.
 - **No External Salt:**
   - The script derives salts from the password or file data to maintain determinism.
   - Be aware that this is less secure than using random, unique salts.
